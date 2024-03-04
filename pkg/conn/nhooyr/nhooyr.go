@@ -1,18 +1,21 @@
-package gorilla
+package nhooyr
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"reflect"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/surrealdb/surrealdb.go/pkg/model"
+	"github.com/surrealdb/surrealdb.go/pkg/respchan"
+	nhooyr "nhooyr.io/websocket"
 
-	gorilla "github.com/gorilla/websocket"
 	"github.com/surrealdb/surrealdb.go/internal/rpc"
 	"github.com/surrealdb/surrealdb.go/pkg/conn"
 	"github.com/surrealdb/surrealdb.go/pkg/logger"
@@ -31,38 +34,40 @@ const (
 type Option func(ws *WebSocket) error
 
 type WebSocket struct {
-	Conn     *gorilla.Conn
+	Conn     *nhooyr.Conn
 	connLock sync.Mutex
 	Timeout  time.Duration
 	Option   []Option
 	logger   logger.Logger
 
-	responseChannels     map[string]chan rpc.RPCResponse
-	responseChannelsLock sync.RWMutex
-
-	notificationChannels     map[string]chan model.Notification
-	notificationChannelsLock sync.RWMutex
+	respChan       *respchan.ResponseChannel[rpc.RPCResponse]
+	respNotifyChan *respchan.ResponseChannel[model.Notification]
 
 	close chan int
 }
 
 func Create() *WebSocket {
 	return &WebSocket{
-		Conn:                 nil,
-		close:                make(chan int),
-		responseChannels:     make(map[string]chan rpc.RPCResponse),
-		notificationChannels: make(map[string]chan model.Notification),
-		Timeout:              DefaultTimeout * time.Second,
+		Conn:           nil,
+		close:          make(chan int),
+		respChan:       respchan.New[rpc.RPCResponse](),
+		respNotifyChan: respchan.New[model.Notification](),
+		Timeout:        DefaultTimeout * time.Second,
 	}
 }
 
 func (ws *WebSocket) Connect(url string) (conn.Connection, error) {
-	dialer := gorilla.DefaultDialer
-	dialer.EnableCompression = true
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
 
-	connection, _, err := dialer.Dial(url, nil)
+	connection, resp, err := nhooyr.Dial(ctx, url, nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusSwitchingProtocols {
+		resp.Body.Close()
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
 	ws.Conn = connection
@@ -85,6 +90,13 @@ func (ws *WebSocket) SetTimeOut(timeout time.Duration) *WebSocket {
 	return ws
 }
 
+func (ws *WebSocket) SetCompression(compression bool) *WebSocket {
+	ws.Option = append(ws.Option, func(ws *WebSocket) error {
+		return nil
+	})
+	return ws
+}
+
 // If path is empty it will use os.stdout/os.stderr
 func (ws *WebSocket) Logger(logData logger.Logger) *WebSocket {
 	ws.logger = logData
@@ -96,28 +108,16 @@ func (ws *WebSocket) RawLogger(logData logger.Logger) *WebSocket {
 	return ws
 }
 
-func (ws *WebSocket) SetCompression(compress bool) *WebSocket {
-	ws.Option = append(ws.Option, func(ws *WebSocket) error {
-		ws.Conn.EnableWriteCompression(compress)
-		return nil
-	})
-	return ws
-}
-
 func (ws *WebSocket) Close() error {
 	ws.connLock.Lock()
 	defer ws.connLock.Unlock()
 	close(ws.close)
-	err := ws.Conn.WriteMessage(gorilla.CloseMessage, gorilla.FormatCloseMessage(CloseMessageCode, ""))
-	if err != nil {
-		return err
-	}
 
-	return ws.Conn.Close()
+	return ws.Conn.Close(nhooyr.StatusNormalClosure, "")
 }
 
 func (ws *WebSocket) LiveNotifications(liveQueryID string) (chan model.Notification, error) {
-	c, err := ws.createNotificationChannel(liveQueryID)
+	c, err := ws.respNotifyChan.CreateResponseChannel(liveQueryID)
 	if err != nil {
 		ws.logger.Error(err.Error())
 	}
@@ -125,58 +125,9 @@ func (ws *WebSocket) LiveNotifications(liveQueryID string) (chan model.Notificat
 }
 
 var (
-	ErrIDInUse           = errors.New("id already in use")
 	ErrTimeout           = errors.New("timeout")
 	ErrInvalidResponseID = errors.New("invalid response id")
 )
-
-func (ws *WebSocket) createResponseChannel(id string) (chan rpc.RPCResponse, error) {
-	ws.responseChannelsLock.Lock()
-	defer ws.responseChannelsLock.Unlock()
-
-	if _, ok := ws.responseChannels[id]; ok {
-		return nil, fmt.Errorf("%w: %v", ErrIDInUse, id)
-	}
-
-	ch := make(chan rpc.RPCResponse)
-	ws.responseChannels[id] = ch
-
-	return ch, nil
-}
-
-func (ws *WebSocket) createNotificationChannel(liveQueryID string) (chan model.Notification, error) {
-	ws.notificationChannelsLock.Lock()
-	defer ws.notificationChannelsLock.Unlock()
-
-	if _, ok := ws.notificationChannels[liveQueryID]; ok {
-		return nil, fmt.Errorf("%w: %v", ErrIDInUse, liveQueryID)
-	}
-
-	ch := make(chan model.Notification)
-	ws.notificationChannels[liveQueryID] = ch
-
-	return ch, nil
-}
-
-func (ws *WebSocket) removeResponseChannel(id string) {
-	ws.responseChannelsLock.Lock()
-	defer ws.responseChannelsLock.Unlock()
-	delete(ws.responseChannels, id)
-}
-
-func (ws *WebSocket) getResponseChannel(id string) (chan rpc.RPCResponse, bool) {
-	ws.responseChannelsLock.RLock()
-	defer ws.responseChannelsLock.RUnlock()
-	ch, ok := ws.responseChannels[id]
-	return ch, ok
-}
-
-func (ws *WebSocket) getLiveChannel(id string) (chan model.Notification, bool) {
-	ws.notificationChannelsLock.RLock()
-	defer ws.notificationChannelsLock.RUnlock()
-	ch, ok := ws.notificationChannels[id]
-	return ch, ok
-}
 
 func (ws *WebSocket) Send(method string, params []interface{}) (interface{}, error) {
 	id := rand.String(RequestIDLength)
@@ -186,11 +137,11 @@ func (ws *WebSocket) Send(method string, params []interface{}) (interface{}, err
 		Params: params,
 	}
 
-	responseChan, err := ws.createResponseChannel(id)
+	responseChan, err := ws.respChan.CreateResponseChannel(id)
 	if err != nil {
 		return nil, err
 	}
-	defer ws.removeResponseChannel(id)
+	defer ws.respChan.RemoveResponseChannel(id)
 
 	if err := ws.write(request); err != nil {
 		return nil, err
@@ -216,7 +167,7 @@ func (ws *WebSocket) Send(method string, params []interface{}) (interface{}, err
 }
 
 func (ws *WebSocket) read(v interface{}) error {
-	_, data, err := ws.Conn.ReadMessage()
+	_, data, err := ws.Conn.Read(context.Background())
 	if err != nil {
 		return err
 	}
@@ -231,7 +182,7 @@ func (ws *WebSocket) write(v interface{}) error {
 
 	ws.connLock.Lock()
 	defer ws.connLock.Unlock()
-	return ws.Conn.WriteMessage(gorilla.TextMessage, data)
+	return ws.Conn.Write(context.Background(), nhooyr.MessageText, data)
 }
 
 func (ws *WebSocket) initialize() {
@@ -259,7 +210,7 @@ func (ws *WebSocket) initialize() {
 func (ws *WebSocket) handleResponse(res rpc.RPCResponse) {
 	if res.ID != nil && res.ID != "" {
 		// Try to resolve message as response to query
-		responseChan, ok := ws.getResponseChannel(fmt.Sprintf("%v", res.ID))
+		responseChan, ok := ws.respChan.GetResponseChannel(fmt.Sprintf("%v", res.ID))
 		if !ok {
 			err := fmt.Errorf("unavailable ResponseChannel %+v", res.ID)
 			ws.logger.Error(err.Error())
@@ -283,7 +234,7 @@ func (ws *WebSocket) handleResponse(res rpc.RPCResponse) {
 			ws.logger.Error(err.Error(), "result", fmt.Sprint(res.Result))
 			return
 		}
-		LiveNotificationChan, ok := ws.getLiveChannel(notification.ID)
+		LiveNotificationChan, ok := ws.respNotifyChan.GetResponseChannel(notification.ID)
 		if !ok {
 			err := fmt.Errorf("unavailable ResponseChannel %+v", resolvedID)
 			ws.logger.Error(err.Error(), "result", fmt.Sprint(res.Result))

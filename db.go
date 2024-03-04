@@ -23,6 +23,12 @@ type Auth struct {
 	Password  string `json:"pass,omitempty"`
 }
 
+type Patch struct {
+	Value any    `json:"value"`
+	Op    string `json:"op"`
+	Path  string `json:"path"`
+}
+
 // New creates a new SurrealDB client.
 func New(url string, connection conn.Connection) (*DB, error) {
 	connection, err := connection.Connect(url)

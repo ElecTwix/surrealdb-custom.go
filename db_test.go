@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/surrealdb/surrealdb.go"
-	"github.com/surrealdb/surrealdb.go/pkg/conn/gorilla"
+	"github.com/surrealdb/surrealdb.go/pkg/conn/nhooyr"
 	"github.com/surrealdb/surrealdb.go/pkg/constants"
 
 	"github.com/surrealdb/surrealdb.go/pkg/conn"
@@ -59,13 +59,13 @@ func TestSurrealDBSuite(t *testing.T) {
 	// Without options
 	buff := bytes.NewBufferString("")
 	logData := createLogger(t, buff)
-	SurrealDBSuite.connImplementations["gorilla"] = gorilla.Create().Logger(logData)
+	SurrealDBSuite.connImplementations["nhooyr"] = nhooyr.Create().Logger(logData)
 	SurrealDBSuite.logBuffer = buff
 
 	// With options
 	buffOpt := bytes.NewBufferString("")
 	logDataOpt := createLogger(t, buff)
-	SurrealDBSuite.connImplementations["gorilla_opt"] = gorilla.Create().SetTimeOut(time.Minute).SetCompression(true).Logger(logDataOpt)
+	SurrealDBSuite.connImplementations["nhooyr_opt"] = nhooyr.Create().SetTimeOut(time.Minute).Logger(logDataOpt)
 	SurrealDBSuite.logBuffer = buffOpt
 
 	RunWsMap(t, SurrealDBSuite)

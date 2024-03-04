@@ -1,7 +1,4 @@
 linters-settings:
-  depguard:
-    list-type: denylist
-
   dupl:
     threshold: 100
   funlen:
@@ -34,10 +31,10 @@ linters-settings:
       - condition
       - return
     ignored-numbers:
-      - '0'
-      - '1'
-      - '2'
-      - '3'
+      - "0"
+      - "1"
+      - "2"
+      - "3"
     ignored-functions:
       - strings.SplitN
 
