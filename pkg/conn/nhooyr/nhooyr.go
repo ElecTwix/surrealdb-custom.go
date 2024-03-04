@@ -123,11 +123,6 @@ func (ws *WebSocket) LiveNotifications(liveQueryID string) (chan model.Notificat
 	return c, err
 }
 
-var (
-	ErrTimeout           = errors.New("timeout")
-	ErrInvalidResponseID = errors.New("invalid response id")
-)
-
 func (ws *WebSocket) Send(method string, params []interface{}) (interface{}, error) {
 	id := rand.String(RequestIDLength)
 	request := &rpc.RPCRequest{
@@ -150,13 +145,13 @@ func (ws *WebSocket) Send(method string, params []interface{}) (interface{}, err
 
 	select {
 	case <-timeout:
-		return nil, ErrTimeout
+		return nil, conn.ErrTimeout
 	case res, open := <-responseChan:
 		if !open {
 			return nil, errors.New("channel closed")
 		}
 		if res.ID != id {
-			return nil, ErrInvalidResponseID
+			return nil, conn.ErrInvalidResponseID
 		}
 		if res.Error != nil {
 			return nil, res.Error

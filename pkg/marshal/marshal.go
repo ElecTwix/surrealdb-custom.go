@@ -18,7 +18,7 @@ const StatusOK = "OK"
 type RawQuery[I any] struct {
 	Status string `json:"status"`
 	Time   string `json:"time"`
-	Result []I    `json:"result"`
+	Result I      `json:"result"`
 	Detail string `json:"detail"`
 }
 
@@ -72,43 +72,18 @@ func UnmarshalRaw[I any](rawData interface{}, v *[]RawQuery[I]) (err error) {
 
 // SmartUnmarshal using generics for return desired type.
 // Supports both raw and normal queries.
-func SmartUnmarshal[I any](respond interface{}, wrapperError error) (outputs []I, err error) {
+func SmartUnmarshal[I any](respond interface{}, out *I) error {
 	// Handle delete
-	if respond == nil || wrapperError != nil {
-		return outputs, wrapperError
-	}
 	data, err := json.Marshal(respond)
 	if err != nil {
-		return outputs, err
+		return err
 	}
 	// Needed for checking fields
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
-	if _, isArr := respond.([]interface{}); !isArr {
-		// Non Arr Normal
-		var output I
-		err = decoder.Decode(&output)
-		if err == nil {
-			outputs = append(outputs, output)
-		}
-	} else {
-		// Arr Normal
-		if err = decoder.Decode(&outputs); err != nil {
-			// Arr Raw
-			var rawArr []RawQuery[I]
-			if err = json.Unmarshal(data, &rawArr); err == nil {
-				outputs = make([]I, 0)
-				for _, raw := range rawArr {
-					if raw.Status != StatusOK {
-						err = errors.Join(err, errors.New(raw.Status))
-					} else {
-						outputs = append(outputs, raw.Result...)
-					}
-				}
-			}
-		}
-	}
-	return outputs, err
+	// Non Arr Normal
+	err = decoder.Decode(out)
+	return err
 }
 
 // Used for define table name, it has no value.

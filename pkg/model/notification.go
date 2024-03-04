@@ -7,6 +7,7 @@ type Notification struct {
 	ID     string      `json:"id"`
 	Result interface{} `json:"result"`
 }
+
 type Action string
 
 const (

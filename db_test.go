@@ -297,12 +297,14 @@ func (s *SurrealDBTestSuite) TestFetch() {
 		s.NoError(err)
 		s.NotEmpty(res)
 
-		userSlice, err := marshal.SmartUnmarshal[testUserWithFriend[testUserWithFriend[interface{}]]](res, err)
+		var data []marshal.RawQuery[[]testUserWithFriend[testUserWithFriend[interface{}]]]
+		err = marshal.SmartUnmarshal[[]marshal.RawQuery[[]testUserWithFriend[testUserWithFriend[interface{}]]]](res, &data)
 		s.NoError(err)
 
-		s.Require().Len(userSlice, 1)
-		s.Require().Len(userSlice[0].Friends, 1)
-		s.Require().NotEmpty(userSlice[0].Friends[0], 1)
+		s.Require().Len(data, 1)
+		s.Require().Len(data[0].Result, 1)
+		s.Require().Len(data[0].Result[0].Friends, 1)
+		s.Require().NotEmpty(data[0].Result[0].Friends[0], 1)
 	})
 
 	s.Run("Run fetch on query using map[string]interface{} for thing and fetchString", func() {
@@ -331,12 +333,14 @@ func (s *SurrealDBTestSuite) TestFetch() {
 		s.NoError(err)
 		s.NotEmpty(res)
 
-		userSlice, err := marshal.SmartUnmarshal[testUserWithFriend[testUserWithFriend[interface{}]]](res, err)
+		var data []marshal.RawQuery[[]testUserWithFriend[testUserWithFriend[interface{}]]]
+		err = marshal.SmartUnmarshal[[]marshal.RawQuery[[]testUserWithFriend[testUserWithFriend[interface{}]]]](res, &data)
 		s.NoError(err)
 
-		s.Require().Len(userSlice, 1)
-		s.Require().Len(userSlice[0].Friends, 1)
-		s.Require().NotEmpty(userSlice[0].Friends[0], 1)
+		s.Require().Len(data, 1)
+		s.Require().Len(data[0].Result, 1)
+		s.Require().Len(data[0].Result[0].Friends, 1)
+		s.Require().NotEmpty(data[0].Result[0].Friends[0], 1)
 	})
 }
 
@@ -554,7 +558,7 @@ func (s *SurrealDBTestSuite) TestUnmarshalRaw() {
 	})
 	s.Require().NoError(err)
 
-	var userSlice []marshal.RawQuery[testUser]
+	var userSlice []marshal.RawQuery[[]testUser]
 	err = marshal.UnmarshalRaw(userData, &userSlice)
 	s.Require().NoError(err)
 	s.Len(userSlice, 1)
@@ -624,110 +628,128 @@ func (s *SurrealDBTestSuite) TestPatch() {
 }
 
 func (s *SurrealDBTestSuite) TestNonRowSelect() {
-	user := testUser{
-		Username: "ElecTwix",
-		Password: "1234",
-		ID:       "users:notexists",
-	}
-
 	_, err := s.db.Select("users:notexists")
-	s.Equal(err, constants.ErrNoRow)
-
-	_, err = marshal.SmartUnmarshal[testUser](s.db.Select("users:notexists"))
-	s.Equal(err, constants.ErrNoRow)
-
-	_, err = marshal.SmartUnmarshal[testUser](marshal.SmartMarshal(s.db.Select, user))
 	s.Equal(err, constants.ErrNoRow)
 }
 
 func (s *SurrealDBTestSuite) TestSmartUnMarshalQuery() {
-	user := []testUser{{
+	user := testUser{
 		Username: "electwix",
 		Password: "1234",
-	}}
+	}
 
 	s.Run("raw create query", func() {
 		QueryStr := "Create users set Username = $user, Password = $pass"
-		dataArr, err := marshal.SmartUnmarshal[testUser](s.db.Query(QueryStr, map[string]interface{}{
-			"user": user[0].Username,
-			"pass": user[0].Password,
-		}))
+		resp, err := s.db.Query(QueryStr, map[string]interface{}{
+			"user": user.Username,
+			"pass": user.Password,
+		})
+		s.Require().NoError(err)
+
+		var RawRepondArr []marshal.RawQuery[[]testUser]
+		err = marshal.SmartUnmarshal[[]marshal.RawQuery[[]testUser]](resp, &RawRepondArr)
 
 		s.Require().NoError(err)
-		s.Equal("electwix", dataArr[0].Username)
-		user = dataArr
+		s.Equal("electwix", RawRepondArr[0].Result[0].Username)
+		user = RawRepondArr[0].Result[0]
 	})
 
 	s.Run("raw select query", func() {
-		dataArr, err := marshal.SmartUnmarshal[testUser](s.db.Query("Select * from $record", map[string]interface{}{
-			"record": user[0].ID,
-		}))
+		resp, err := s.db.Query("Select * from $record", map[string]interface{}{
+			"record": user.ID,
+		})
 
 		s.Require().NoError(err)
-		s.Equal("electwix", dataArr[0].Username)
+
+		var rawQuery []marshal.RawQuery[[]testUser]
+		err = marshal.SmartUnmarshal[[]marshal.RawQuery[[]testUser]](resp, &rawQuery)
+
+		s.Require().NoError(err)
+		s.Equal("electwix", rawQuery[0].Result[0].Username)
 	})
 
 	s.Run("select query", func() {
-		data, err := marshal.SmartUnmarshal[testUser](s.db.Select(user[0].ID))
+		resp, err := s.db.Select(user.ID)
+		s.Require().NoError(err)
+
+		var userData testUser
+		err = marshal.SmartUnmarshal[testUser](resp, &userData)
 
 		s.Require().NoError(err)
-		s.Equal("electwix", data[0].Username)
+		s.Equal("electwix", userData.Username)
 	})
 
 	s.Run("select array query", func() {
-		data, err := marshal.SmartUnmarshal[testUser](s.db.Select("users"))
+		resp, err := s.db.Select("users")
+		s.Require().NoError(err)
+
+		var userData []testUser
+		err = marshal.SmartUnmarshal[[]testUser](resp, &userData)
 
 		s.Require().NoError(err)
-		s.Equal("electwix", data[0].Username)
+		s.Equal("electwix", userData[0].Username)
 	})
 
 	s.Run("delete record query", func() {
-		data, err := marshal.SmartUnmarshal[testUser](s.db.Delete(user[0].ID))
+		resp, err := s.db.Delete(user.ID)
+		s.Require().NoError(err)
+
+		var user testUser
+		err = marshal.SmartUnmarshal[testUser](resp, &user)
 
 		s.Require().NoError(err)
-		s.Len(data, 0)
 	})
 }
 
 func (s *SurrealDBTestSuite) TestSmartMarshalQuery() {
-	user := []testUser{{
+	user := testUser{
 		Username: "electwix",
 		Password: "1234",
 		ID:       "sometable:someid",
-	}}
+	}
 
 	s.Run("create with SmartMarshal query", func() {
-		data, err := marshal.SmartUnmarshal[testUser](marshal.SmartMarshal(s.db.Create, user[0]))
+		resp, err := marshal.SmartMarshal(s.db.Create, user)
 		s.Require().NoError(err)
-		s.Len(data, 1)
-		s.Equal(user[0], data[0])
+
+		var userData testUser
+		err = marshal.SmartUnmarshal[testUser](resp, &userData)
+		s.Require().NoError(err)
+		s.Equal(user, userData)
 	})
 
 	s.Run("select with SmartMarshal query", func() {
-		data, err := marshal.SmartUnmarshal[testUser](marshal.SmartMarshal(s.db.Select, user[0]))
+		resp, err := marshal.SmartMarshal(s.db.Select, user)
 		s.Require().NoError(err)
-		s.Len(data, 1)
-		s.Equal(user[0], data[0])
+
+		var userData testUser
+		err = marshal.SmartUnmarshal[testUser](resp, &userData)
+		s.Require().NoError(err)
+		s.Equal(user, userData)
 	})
 
 	s.Run("update with SmartMarshal query", func() {
-		user[0].Password = "test123"
-		data, err := marshal.SmartUnmarshal[testUser](marshal.SmartMarshal(s.db.Update, user[0]))
+		user.Password = "test123"
+
+		resp, err := marshal.SmartMarshal(s.db.Update, user)
 		s.Require().NoError(err)
-		s.Len(data, 1)
-		s.Equal(user[0].Password, data[0].Password)
+
+		var userData testUser
+		err = marshal.SmartUnmarshal[testUser](resp, &userData)
+		s.Require().NoError(err)
+		s.Equal(user.Password, userData.Password)
 	})
 
 	s.Run("delete with SmartMarshal query", func() {
-		data, err := marshal.SmartMarshal(s.db.Delete, user[0])
+		data, err := marshal.SmartMarshal(s.db.Delete, user)
 		s.Require().NoError(err)
 		s.Nil(data)
 	})
 
 	s.Run("check if data deleted SmartMarshal query", func() {
-		data, err := marshal.SmartUnmarshal[testUser](marshal.SmartMarshal(s.db.Select, user[0]))
+		data, err := marshal.SmartMarshal(s.db.Select, user)
 		s.Require().Equal(err, constants.ErrNoRow)
-		s.Len(data, 0)
+		s.Require().Nil(data)
 	})
 }
 
