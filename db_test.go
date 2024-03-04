@@ -33,6 +33,7 @@ type SurrealDBTestSuite struct {
 	name                string
 	connImplementations map[string]conn.Connection
 	logBuffer           *bytes.Buffer
+	finished            bool
 }
 
 // a simple user struct for testing
@@ -99,6 +100,7 @@ func (s *SurrealDBTestSuite) TearDownTest() {
 
 // TearDownSuite is called after the s has finished running
 func (s *SurrealDBTestSuite) TearDownSuite() {
+	s.finished = true
 	err := s.db.Close()
 	s.Require().NoError(err)
 }
@@ -122,6 +124,15 @@ func (s *SurrealDBTestSuite) openConnection() *surrealdb.DB {
 	require.NotNil(s.T(), impl)
 	db, err := surrealdb.New(url, impl)
 	s.Require().NoError(err)
+	go func(s *SurrealDBTestSuite) {
+		err := db.Start()
+		if s.finished {
+			return
+		}
+		if err != nil {
+			s.FailNow(err.Error())
+		}
+	}(s)
 	return db
 }
 

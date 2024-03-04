@@ -78,7 +78,6 @@ func (ws *WebSocket) Connect(url string) (conn.Connection, error) {
 		}
 	}
 
-	ws.initialize()
 	return ws, nil
 }
 
@@ -185,26 +184,24 @@ func (ws *WebSocket) write(v interface{}) error {
 	return ws.Conn.Write(context.Background(), nhooyr.MessageText, data)
 }
 
-func (ws *WebSocket) initialize() {
-	go func() {
-		for {
-			select {
-			case <-ws.close:
-				return
-			default:
-				var res rpc.RPCResponse
-				err := ws.read(&res)
-				if err != nil {
-					if errors.Is(err, net.ErrClosed) {
-						break
-					}
-					ws.logger.Error(err.Error())
-					continue
+func (ws *WebSocket) Start() error {
+	for {
+		select {
+		case <-ws.close:
+			return net.ErrClosed
+		default:
+			var res rpc.RPCResponse
+			err := ws.read(&res)
+			if err != nil {
+				if errors.Is(err, net.ErrClosed) {
+					return net.ErrClosed
 				}
-				go ws.handleResponse(res)
+				ws.logger.Error(err.Error())
+				continue
 			}
+			go ws.handleResponse(res)
 		}
-	}()
+	}
 }
 
 func (ws *WebSocket) handleResponse(res rpc.RPCResponse) {
