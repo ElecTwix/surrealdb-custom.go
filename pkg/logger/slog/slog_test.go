@@ -2,10 +2,11 @@ package slog_test
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/goccy/go-json"
 
 	rawslog "log/slog"
 
