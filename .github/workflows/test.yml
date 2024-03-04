@@ -21,7 +21,7 @@ jobs:
     steps:
       - name: Start SurrealDB
         run: docker run -it -d --rm --name surrealdb -p 8000:8000 surrealdb/surrealdb:nightly start -u root -p root
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
