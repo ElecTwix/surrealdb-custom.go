@@ -188,10 +188,10 @@ func (ws *WebSocket) Start() error {
 			var res rpc.RPCResponse
 			err := ws.read(&res)
 			if err != nil {
+				ws.logger.Error(err.Error())
 				if errors.Is(err, net.ErrClosed) {
 					return net.ErrClosed
 				}
-				ws.logger.Error(err.Error())
 				continue
 			}
 			go ws.handleResponse(res)
