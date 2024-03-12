@@ -3,8 +3,8 @@ package mock
 import (
 	"errors"
 
-	"github.com/surrealdb/surrealdb.go/pkg/conn"
-	"github.com/surrealdb/surrealdb.go/pkg/model"
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/conn"
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/model"
 )
 
 type ws struct{}

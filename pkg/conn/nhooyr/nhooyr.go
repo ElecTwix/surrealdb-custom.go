@@ -12,14 +12,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/surrealdb/surrealdb.go/pkg/model"
-	"github.com/surrealdb/surrealdb.go/pkg/respchan"
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/model"
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/respchan"
 	nhooyr "nhooyr.io/websocket"
 
-	"github.com/surrealdb/surrealdb.go/internal/rpc"
-	"github.com/surrealdb/surrealdb.go/pkg/conn"
-	"github.com/surrealdb/surrealdb.go/pkg/logger"
-	"github.com/surrealdb/surrealdb.go/pkg/rand"
+	"github.com/ElecTwix/surrealdb-custom.go/internal/rpc"
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/conn"
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/logger"
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/rand"
 )
 
 const (

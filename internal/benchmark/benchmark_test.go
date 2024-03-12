@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/surrealdb/surrealdb.go"
-	"github.com/surrealdb/surrealdb.go/internal/mock"
-	"github.com/surrealdb/surrealdb.go/pkg/marshal"
+	"github.com/ElecTwix/surrealdb-custom.go"
+	"github.com/ElecTwix/surrealdb-custom.go/internal/mock"
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/marshal"
 )
 
 // a simple user struct for testing

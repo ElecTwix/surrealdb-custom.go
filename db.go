@@ -3,10 +3,10 @@ package surrealdb
 import (
 	"fmt"
 
-	"github.com/surrealdb/surrealdb.go/pkg/model"
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/model"
 
-	"github.com/surrealdb/surrealdb.go/pkg/conn"
-	"github.com/surrealdb/surrealdb.go/pkg/constants"
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/conn"
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/constants"
 )
 
 // DB is a client for the SurrealDB database that holds the connection.

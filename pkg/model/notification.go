@@ -1,6 +1,6 @@
 package model
 
-import "github.com/surrealdb/surrealdb.go/internal/rpc"
+import "github.com/ElecTwix/surrealdb-custom.go/internal/rpc"
 
 type Notification struct {
 	Action Action      `json:"action"`

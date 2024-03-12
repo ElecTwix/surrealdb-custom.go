@@ -3,7 +3,7 @@ package conn
 import (
 	"errors"
 
-	"github.com/surrealdb/surrealdb.go/pkg/model"
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/model"
 )
 
 var (

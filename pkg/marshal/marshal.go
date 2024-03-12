@@ -8,8 +8,8 @@ import (
 
 	"github.com/goccy/go-json"
 
-	"github.com/surrealdb/surrealdb.go/pkg/constants"
-	"github.com/surrealdb/surrealdb.go/pkg/util"
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/constants"
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/util"
 )
 
 const StatusOK = "OK"

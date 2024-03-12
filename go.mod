@@ -1,4 +1,4 @@
-module github.com/surrealdb/surrealdb.go
+module github.com/ElecTwix/surrealdb-custom.go
 
 go 1.22
 

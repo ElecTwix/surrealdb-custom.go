@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/surrealdb/surrealdb.go/internal/rpc"
-	"github.com/surrealdb/surrealdb.go/pkg/model"
+	"github.com/ElecTwix/surrealdb-custom.go/internal/rpc"
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/model"
 )
 
 var ErrIDInUse = errors.New("id already in use")

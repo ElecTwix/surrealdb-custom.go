@@ -11,19 +11,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/logger/slog"
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/model"
 	"github.com/stretchr/testify/assert"
-	"github.com/surrealdb/surrealdb.go/pkg/logger/slog"
-	"github.com/surrealdb/surrealdb.go/pkg/model"
 
+	"github.com/ElecTwix/surrealdb-custom.go"
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/conn/nhooyr"
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/constants"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/surrealdb/surrealdb.go"
-	"github.com/surrealdb/surrealdb.go/pkg/conn/nhooyr"
-	"github.com/surrealdb/surrealdb.go/pkg/constants"
 
-	"github.com/surrealdb/surrealdb.go/pkg/conn"
-	"github.com/surrealdb/surrealdb.go/pkg/logger"
-	"github.com/surrealdb/surrealdb.go/pkg/marshal"
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/conn"
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/logger"
+	"github.com/ElecTwix/surrealdb-custom.go/pkg/marshal"
 )
 
 // TestDBSuite is a test s for the DB struct
