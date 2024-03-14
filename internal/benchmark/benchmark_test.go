@@ -18,7 +18,8 @@ type testUser struct {
 }
 
 func SetupMockDB() (*surrealdb.DB, error) {
-	return surrealdb.New("", mock.Create())
+	authData := surrealdb.Auth{Username: "root", Password: "root", Namespace: "test", Database: "test"}
+	return surrealdb.New("", mock.Create(), &authData)
 }
 
 func BenchmarkCreate(b *testing.B) {

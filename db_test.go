@@ -122,7 +122,8 @@ func (s *SurrealDBTestSuite) openConnection() *surrealdb.DB {
 	}
 	impl := s.connImplementations[s.name]
 	require.NotNil(s.T(), impl)
-	db, err := surrealdb.New(url, impl)
+	authData := surrealdb.Auth{Username: "root", Password: "root", Namespace: "test", Database: "test"}
+	db, err := surrealdb.New(url, impl, &authData)
 	s.Require().NoError(err)
 	go func(s *SurrealDBTestSuite) {
 		err := db.Start()

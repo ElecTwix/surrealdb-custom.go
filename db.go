@@ -12,6 +12,7 @@ import (
 // DB is a client for the SurrealDB database that holds the connection.
 type DB struct {
 	conn conn.Connection
+	auth *Auth
 }
 
 // Auth is a struct that holds surrealdb auth data for login.
@@ -30,12 +31,12 @@ type Patch struct {
 }
 
 // New creates a new SurrealDB client.
-func New(url string, connection conn.Connection) (*DB, error) {
+func New(url string, connection conn.Connection, defaultAuthData *Auth) (*DB, error) {
 	connection, err := connection.Connect(url)
 	if err != nil {
 		return nil, err
 	}
-	return &DB{connection}, nil
+	return &DB{connection, defaultAuthData}, nil
 }
 
 // --------------------------------------------------
@@ -149,6 +150,16 @@ func (db *DB) send(method string, params ...interface{}) (interface{}, error) {
 	// here we send the args through our websocket connection
 	resp, err := db.conn.Send(method, params)
 	if err != nil {
+		if err == constants.ErrExpiredSesion {
+			data, err := db.Signin(db.auth)
+			fmt.Println("try reauth", data, err)
+			if err != nil {
+				return nil, err
+			}
+			fmt.Println("reauth success")
+			db.send(method, params)
+		}
+
 		return nil, fmt.Errorf("sending request failed for method '%s': %w", method, err)
 	}
 

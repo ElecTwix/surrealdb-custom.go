@@ -4,7 +4,8 @@ import "errors"
 
 // Errors
 var (
-	InvalidResponse = errors.New("invalid SurrealDB response") //nolint:stylecheck
-	ErrQuery        = errors.New("error occurred processing the SurrealDB query")
-	ErrNoRow        = errors.New("error no row")
+	InvalidResponse  = errors.New("invalid SurrealDB response") //nolint:stylecheck
+	ErrQuery         = errors.New("error occurred processing the SurrealDB query")
+	ErrNoRow         = errors.New("error no row")
+	ErrExpiredSesion = errors.New("The session has expired") // nolint:stylecheck
 )
